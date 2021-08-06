@@ -14,7 +14,7 @@ void Ast_Print(Ast* ast, u64 indent) {
     };
 
     if (ast == nullptr) {
-        Print("nullptr");
+        Print("()");
         return;
     }
 
@@ -26,17 +26,20 @@ void Ast_Print(Ast* ast, u64 indent) {
         } break;
 
         case AstKind::Scope: {
-            Print("(<Scope> (\n");
+            Print("(<Scope> (");
+            PrintCategory("Statements: (");
             for (u64 i = 0; i < ast->Scope.Statements.Length; i++) {
-                if (i != 0) {
-                    Print(",\n");
+                if (i == 0) {
+                    Print("\n");
                 }
 
-                PrintIndent(1);
-                Ast_Print(ast->Scope.Statements[i], indent + 1);
+                PrintIndent(2);
+                Ast_Print(ast->Scope.Statements[i], indent + 2);
+
+                if (i != ast->Scope.Statements.Length - 1) {
+                    Print(",\n");
+                }
             }
-            Print("\n");
-            PrintIndent();
             Print(")");
         } break;
 
@@ -109,6 +112,28 @@ void Ast_Print(Ast* ast, u64 indent) {
             PrintCategory("Derefed Type: ");
             Ast_Print(ast->TypeDeref.DerefedType, indent + 1);
             Print(")");
+        } break;
+
+        case AstKind::Procedure: {
+            Print("(<Procedure>");
+            PrintCategory("Arguments: (");
+            for (u64 i = 0; i < ast->Procedure.Arguments.Length; i++) {
+                if (i == 0) {
+                    Print("\n");
+                }
+
+                PrintIndent(1);
+                Ast_Print(ast->Procedure.Arguments[i], indent + 1);
+
+                if (i != ast->Procedure.Arguments.Length - 1) {
+                    Print(",\n");
+                }
+            }
+            Print(")");
+            PrintCategory("ReturnType: ");
+            Ast_Print(ast->Procedure.ReturnType, indent + 1);
+            PrintCategory("Body: ");
+            Ast_Print(ast->Procedure.Body, indent + 1);
         } break;
 
         case AstKind::_Statement_Begin:

@@ -32,7 +32,22 @@ Token Parser::ExpectToken(TokenKind kind) {
     }
 }
 
+AstScope* Parser::ParseScope(Array<Ast*> extraVarsInScope) {
+    this->ExpectToken(TokenKind::LBrace);
+    Array<AstStatement*> statements = Array_Create<AstStatement*>();
+    while (!Token_IsRBrace(this->Current) && !Token_IsEndOfFile(this->Current)) {
+        Array_Add(statements, this->ParseStatement());
+    }
+    this->ExpectToken(TokenKind::RBrace);
+    return Ast_CreateScope(this->ParentFile, this->ParentScope, { statements, extraVarsInScope });
+}
+
 AstStatement* Parser::ParseStatement() {
+    if (Token_IsSemicolon(this->Current)) {
+        this->ExpectToken(TokenKind::Semicolon);
+        return this->ParseStatement();
+    }
+
     AstExpression* expression = this->ParseExpression();
 
     switch (this->Current.Kind) {
@@ -46,12 +61,13 @@ AstStatement* Parser::ParseStatement() {
                 Array_Add(this->Errors, String(message));
             }
             AstDeclaration* declaration = this->ParseDeclaration(expression);
-            this->ExpectToken(TokenKind::Semicolon);
+            if (declaration != nullptr && !Ast_IsProcedure(declaration->Declaration.Value)) {
+                this->ExpectToken(TokenKind::Semicolon);
+            }
             return declaration;
         } break;
 
         default: {
-            this->ExpectToken(TokenKind::Semicolon);
             return expression;
         } break;
     }
@@ -65,11 +81,11 @@ AstDeclaration* Parser::ParseDeclaration(AstName* name) {
         type = this->ParseType();
     }
 
-    if (this->Current.Kind == TokenKind::Colon) {
+    if (Token_IsColon(this->Current)) {
         this->ExpectToken(TokenKind::Colon);
         AstExpression* value = this->ParseExpression();
         return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { true, name, type, value });
-    } else if (this->Current.Kind == TokenKind::Equals) {
+    } else if (Token_IsEquals(this->Current)) {
         this->ExpectToken(TokenKind::Equals);
         AstExpression* value = this->ParseExpression();
         return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, value });
@@ -98,7 +114,16 @@ AstExpression* Parser::ParsePrimaryExpression() {
 
         case TokenKind::LParen: {
             this->NextToken();
+            if (Token_IsRParen(this->Current)) {
+                return this->ParseProcedure();
+            }
             AstExpression* expression = this->ParseExpression();
+            if (Token_IsColon(this->Current)) {
+                if (!Ast_IsName(expression)) {
+                    Array_Add(this->Errors, String("Expected name")); // TODO: Better error
+                    return this->ParseProcedure(expression);
+                }
+            }
             this->ExpectToken(TokenKind::RParen);
             return expression;
         } break;
@@ -190,6 +215,14 @@ AstType* Parser::ParseType() {
             return Ast_CreateTypeName(this->ParentFile, this->ParentScope, { this->ExpectToken(TokenKind::Identifier) });
         } break;
 
+        case TokenKind::LParen: {
+            // TODO: Procedure types
+            this->ExpectToken(TokenKind::LParen);
+            AstType* type = this->ParseType();
+            this->ExpectToken(TokenKind::RParen);
+            return type;
+        } break;
+
         default: {
             const char* message = "Unexpected '%.*s'";
             String name         = GetTokenKindName(this->NextToken().Kind);
@@ -199,5 +232,80 @@ AstType* Parser::ParseType() {
             Array_Add(this->Errors, String(buffer));
             return nullptr;
         } break;
+    }
+}
+
+AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
+    Array<AstDeclaration*> arguments = Array_Create<AstDeclaration*>();
+
+    if (firstArgName != nullptr) {
+        this->ExpectToken(TokenKind::Colon);
+
+        AstType* type = nullptr;
+        if (!Token_IsEquals(this->Current)) {
+            type = this->ParseType();
+        }
+
+        AstExpression* value = nullptr;
+        if (Token_IsEquals(this->Current)) {
+            value = this->ParseExpression();
+        }
+
+        if (type == nullptr && value == nullptr) {
+            Array_Add(this->Errors, String("Cannot have a declaration with no type nor value"));
+        }
+
+        Array_Add(arguments, Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, firstArgName, type, value }));
+
+        if (!Token_IsRParen(this->Current)) {
+            this->ExpectToken(TokenKind::Comma);
+        }
+    }
+
+    while (!Token_IsRParen(this->Current) && !Token_IsEndOfFile(this->Current)) {
+        AstName* name = Ast_CreateName(this->ParentFile, this->ParentScope, { this->ExpectToken(TokenKind::Identifier) });
+        this->ExpectToken(TokenKind::Colon);
+
+        AstType* type = nullptr;
+        if (!Token_IsEquals(this->Current)) {
+            type = this->ParseType();
+        }
+
+        AstExpression* value = nullptr;
+        if (Token_IsEquals(this->Current)) {
+            value = this->ParseExpression();
+        }
+
+        if (type == nullptr && value == nullptr) {
+            Array_Add(this->Errors, String("Cannot have a declaration with no type nor value"));
+        }
+
+        Array_Add(arguments, Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, value }));
+
+        if (!Token_IsRParen(this->Current)) {
+            this->ExpectToken(TokenKind::Comma);
+        }
+    }
+
+    this->ExpectToken(TokenKind::RParen);
+
+    AstType* returnType = nullptr;
+    if (Token_IsMinus(this->Current)) {
+        this->ExpectToken(TokenKind::Minus);
+        this->ExpectToken(TokenKind::GreaterThan);
+        returnType = this->ParseType();
+    }
+
+    if (Token_IsLBrace(this->Current)) {
+        Array<Ast*> scopeParams = Array_Create<Ast*>();
+        AstProcedure* procedure =
+            Array_Add(scopeParams, Ast_CreateProcedure(this->ParentFile, this->ParentScope, { arguments, returnType, nullptr }));
+        AstScope* body            = this->ParseScope(scopeParams);
+        procedure->Procedure.Body = body;
+        return procedure;
+    } else {
+        // TODO: Procedure Type
+        ASSERT(false);
+        return nullptr;
     }
 }

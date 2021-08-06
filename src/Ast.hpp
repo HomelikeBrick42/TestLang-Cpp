@@ -39,6 +39,12 @@
         AstExpression* Right;                                             \
     })                                                                    \
                                                                           \
+    AST_KIND(Procedure, "Procedure", {                                    \
+        Array<AstDeclaration*> Arguments;                                 \
+        AstType* ReturnType;                                              \
+        AstScope* Body;                                                   \
+    })                                                                    \
+                                                                          \
     AST_KIND_BEGIN(Type)                                                  \
                                                                           \
     AST_KIND(TypeName, "Type Name", { Token Name; })                      \

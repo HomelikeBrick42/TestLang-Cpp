@@ -11,6 +11,8 @@ public:
     Parser(const String& source);
     ~Parser();
 public:
+    AstScope* ParseScope(Array<Ast*> extraVarsInScope = Array_Create<Ast*>());
+
     AstStatement* ParseStatement();
     AstDeclaration* ParseDeclaration(AstName* name);
 
@@ -19,6 +21,8 @@ public:
     AstExpression* ParseBinaryExpression(u64 parentPrecedence);
 
     AstType* ParseType();
+
+    AstProcedure* ParseProcedure(AstName* firstArgName = nullptr);
 private:
     Token NextToken();
     Token ExpectToken(TokenKind kind);
