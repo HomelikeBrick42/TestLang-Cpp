@@ -77,7 +77,7 @@ AST_KINDS
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
-#define AST_KIND(name, str, ...) using Ast##name##Data = struct __VA_ARGS__;
+#define AST_KIND(name, str, ...) struct Ast##name##Data __VA_ARGS__;
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)
 AST_KINDS
@@ -125,7 +125,7 @@ AST_KINDS
     inline static Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, Ast##name##Data data) { \
         ASSERT(file == nullptr || Ast_IsFile(file));                                                  \
         ASSERT(scope == nullptr || Ast_IsScope(scope));                                               \
-        Ast* ast         = new Ast{};                                                                 \
+        Ast* ast         = (Ast*)std::memset(::operator new(sizeof(Ast)), 0, sizeof(Ast));            \
         ast->Kind        = AstKind::name;                                                             \
         ast->ParentFile  = file;                                                                      \
         ast->ParentScope = scope;                                                                     \
