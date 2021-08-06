@@ -62,7 +62,7 @@ AstDeclaration* Parser::ParseDeclaration(AstName* name) {
 
     AstType* type = nullptr;
     if (this->Current.Kind != TokenKind::Colon && this->Current.Kind != TokenKind::Equals) {
-        type = nullptr; // TODO:
+        type = this->ParseType();
     }
 
     if (this->Current.Kind == TokenKind::Colon) {
@@ -99,16 +99,7 @@ AstExpression* Parser::ParsePrimaryExpression() {
         case TokenKind::LParen: {
             this->NextToken();
             AstExpression* expression = this->ParseExpression();
-            if (!Token_IsRParen(this->Current)) {
-                const char* message = "Expected ')' got '%.*s'";
-                String name         = GetTokenKindName(this->Current.Kind);
-                u64 size            = std::snprintf(nullptr, 0, message, (u32)name.Length, name.Data);
-                char* buffer        = new char[size];
-                std::sprintf(buffer, message, (u32)name.Length, name.Data);
-                Array_Add(this->Errors, String(buffer));
-            } else {
-                this->NextToken();
-            }
+            this->ExpectToken(TokenKind::RParen);
             return expression;
         } break;
 
@@ -128,6 +119,8 @@ inline static u64 GetUnaryOperatorPrecedence(const Token& token) {
     switch (token.Kind) {
         case TokenKind::Plus:
         case TokenKind::Minus:
+        case TokenKind::Asterisk:
+        case TokenKind::Caret:
             return 4;
 
         default:
@@ -180,4 +173,31 @@ AstExpression* Parser::ParseBinaryExpression(u64 parentPrecedence) {
     }
 
     return left;
+}
+AstType* Parser::ParseType() {
+    switch (this->Current.Kind) {
+        case TokenKind::Caret: {
+            this->ExpectToken(TokenKind::Caret);
+            return Ast_CreateTypePointer(this->ParentFile, this->ParentScope, { this->ParseType() });
+        } break;
+
+        case TokenKind::Asterisk: {
+            this->ExpectToken(TokenKind::Asterisk);
+            return Ast_CreateTypeDeref(this->ParentFile, this->ParentScope, { this->ParseType() });
+        } break;
+
+        case TokenKind::Identifier: {
+            return Ast_CreateTypeName(this->ParentFile, this->ParentScope, { this->ExpectToken(TokenKind::Identifier) });
+        } break;
+
+        default: {
+            const char* message = "Unexpected '%.*s'";
+            String name         = GetTokenKindName(this->NextToken().Kind);
+            u64 size            = std::snprintf(nullptr, 0, message, (u32)name.Length, name.Data);
+            char* buffer        = new char[size];
+            std::sprintf(buffer, message, (u32)name.Length, name.Data);
+            Array_Add(this->Errors, String(buffer));
+            return nullptr;
+        } break;
+    }
 }

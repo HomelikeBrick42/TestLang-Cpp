@@ -68,7 +68,7 @@ void Ast_Print(Ast* ast, u64 indent) {
         case AstKind::Name: {
             Print("(<Name>");
             PrintCategory("Value: ");
-            Print("%.*s)", (u32)ast->Name.Identifier.Data.Name.Length, ast->Name.Identifier.Data.Name.Data);
+            Print("'%.*s')", (u32)ast->Name.Identifier.Data.Name.Length, ast->Name.Identifier.Data.Name.Data);
         } break;
 
         case AstKind::Unary: {
@@ -94,7 +94,21 @@ void Ast_Print(Ast* ast, u64 indent) {
         case AstKind::TypeName: {
             Print("(<Type Name>");
             PrintCategory("Value: ");
-            Print("%.*s)", (u32)ast->TypeName.Name.Data.Name.Length, ast->TypeName.Name.Data.Name.Data);
+            Print("'%.*s')", (u32)ast->TypeName.Name.Data.Name.Length, ast->TypeName.Name.Data.Name.Data);
+        } break;
+
+        case AstKind::TypePointer: {
+            Print("(<Type Pointer>");
+            PrintCategory("Pointer To: ");
+            Ast_Print(ast->TypePointer.PointerTo, indent + 1);
+            Print(")");
+        } break;
+
+        case AstKind::TypeDeref: {
+            Print("(<Type Deref>");
+            PrintCategory("Derefed Type: ");
+            Ast_Print(ast->TypeDeref.DerefedType, indent + 1);
+            Print(")");
         } break;
 
         case AstKind::_Statement_Begin:

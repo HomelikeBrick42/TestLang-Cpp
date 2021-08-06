@@ -17,6 +17,8 @@ public:
     AstExpression* ParseExpression();
     AstExpression* ParsePrimaryExpression();
     AstExpression* ParseBinaryExpression(u64 parentPrecedence);
+
+    AstType* ParseType();
 private:
     Token NextToken();
     Token ExpectToken(TokenKind kind);

@@ -19,6 +19,7 @@
     TOKEN_KIND(Colon, ":")                                \
     TOKEN_KIND(Semicolon, ";")                            \
     TOKEN_KIND(Comma, ",")                                \
+    TOKEN_KIND(Caret, "^")                                \
                                                           \
     TOKEN_KIND(Plus, "+")                                 \
     TOKEN_KIND(Minus, "-")                                \
@@ -48,7 +49,7 @@ enum struct TokenKind : u8 {
 #undef TOKEN_KIND_DATA
 };
 
-inline static String GetTokenKindName(TokenKind kind) {
+inline String GetTokenKindName(TokenKind kind) {
     switch (kind) {
 #define TOKEN_KIND(name, str) \
     case TokenKind::name:     \
@@ -78,35 +79,35 @@ struct Token {
     } Data;
 };
 
-#define TOKEN_KIND(name, str)                               \
-    inline static bool Token_Is##name(const Token& token) { \
-        return token.Kind == TokenKind::name;               \
+#define TOKEN_KIND(name, str)                        \
+    inline bool Token_Is##name(const Token& token) { \
+        return token.Kind == TokenKind::name;        \
     }
 #define TOKEN_KIND_DATA(name, str, dataType, dataName) TOKEN_KIND(name, str)
 TOKEN_KINDS
 #undef TOKEN_KIND
 #undef TOKEN_KIND_DATA
 
-#define TOKEN_KIND(name, str)                                                                \
-    inline static Token Token_Create##name(u64 position, u64 line, u64 column, u64 length) { \
-        Token token    = {};                                                                 \
-        token.Kind     = TokenKind::name;                                                    \
-        token.Position = position;                                                           \
-        token.Line     = line;                                                               \
-        token.Column   = column;                                                             \
-        token.Length   = length;                                                             \
-        return token;                                                                        \
+#define TOKEN_KIND(name, str)                                                         \
+    inline Token Token_Create##name(u64 position, u64 line, u64 column, u64 length) { \
+        Token token    = {};                                                          \
+        token.Kind     = TokenKind::name;                                             \
+        token.Position = position;                                                    \
+        token.Line     = line;                                                        \
+        token.Column   = column;                                                      \
+        token.Length   = length;                                                      \
+        return token;                                                                 \
     }
-#define TOKEN_KIND_DATA(name, str, dataType, dataName)                                                          \
-    inline static Token Token_Create##name(u64 position, u64 line, u64 column, u64 length, dataType dataName) { \
-        Token token         = {};                                                                               \
-        token.Kind          = TokenKind::name;                                                                  \
-        token.Position      = position;                                                                         \
-        token.Line          = line;                                                                             \
-        token.Column        = column;                                                                           \
-        token.Length        = length;                                                                           \
-        token.Data.dataName = dataName;                                                                         \
-        return token;                                                                                           \
+#define TOKEN_KIND_DATA(name, str, dataType, dataName)                                                   \
+    inline Token Token_Create##name(u64 position, u64 line, u64 column, u64 length, dataType dataName) { \
+        Token token         = {};                                                                        \
+        token.Kind          = TokenKind::name;                                                           \
+        token.Position      = position;                                                                  \
+        token.Line          = line;                                                                      \
+        token.Column        = column;                                                                    \
+        token.Length        = length;                                                                    \
+        token.Data.dataName = dataName;                                                                  \
+        return token;                                                                                    \
     }
 TOKEN_KINDS
 #undef TOKEN_KIND

@@ -1,1 +1,1 @@
-test := (1 + -2 * hello2) % 2;
+test: int = (1 + -2 * hello2) % 2;

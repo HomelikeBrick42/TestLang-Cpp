@@ -53,6 +53,7 @@ Token Lexer::NextToken() {
                 MATCH(':', Colon);
                 MATCH(';', Semicolon);
                 MATCH(',', Comma);
+                MATCH('^', Caret);
 
                 MATCH2('+', Plus, '=', PlusEquals);
                 MATCH2('-', Minus, '=', MinusEquals);

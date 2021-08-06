@@ -42,6 +42,8 @@
     AST_KIND_BEGIN(Type)                                                  \
                                                                           \
     AST_KIND(TypeName, "Type Name", { Token Name; })                      \
+    AST_KIND(TypePointer, "Type Pointer", { AstType* PointerTo; })        \
+    AST_KIND(TypeDeref, "Type Deref", { AstType* DerefedType; })          \
                                                                           \
     AST_KIND_END(Type)                                                    \
                                                                           \
@@ -59,7 +61,7 @@ enum struct AstKind {
 #undef AST_KIND_END
 };
 
-inline static String GetAstKindName(AstKind kind) {
+inline String GetAstKindName(AstKind kind) {
     switch (kind) {
 #define AST_KIND(name, str, type_data) \
     case AstKind::name:                \
@@ -93,10 +95,17 @@ AST_KINDS
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
+enum struct AstCompletion {
+    Incomplete,
+    Completing,
+    Complete,
+};
+
 struct Ast {
     AstKind Kind;
     AstFile* ParentFile;
     AstScope* ParentScope;
+    AstCompletion Completion;
 
     union {
 #define AST_KIND(name, str, type_data) Ast##name##Data name;
@@ -109,15 +118,15 @@ struct Ast {
     };
 };
 
-#define AST_KIND(name, str, type_data)                \
-    inline static bool Ast_Is##name(const Ast* ast) { \
-        if (ast == nullptr) {                         \
-            return false;                             \
-        }                                             \
-        return ast->Kind == AstKind::name;            \
+#define AST_KIND(name, str, type_data)         \
+    inline bool Ast_Is##name(const Ast* ast) { \
+        if (ast == nullptr) {                  \
+            return false;                      \
+        }                                      \
+        return ast->Kind == AstKind::name;     \
     }
 #define AST_KIND_BEGIN(name)                                                               \
-    inline static bool Ast_Is##name(const Ast* ast) {                                      \
+    inline bool Ast_Is##name(const Ast* ast) {                                             \
         if (ast == nullptr) {                                                              \
             return false;                                                                  \
         }                                                                                  \
@@ -129,16 +138,17 @@ AST_KINDS
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
-#define AST_KIND(name, str, type_data)                                                                \
-    inline static Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, Ast##name##Data data) { \
-        ASSERT(file == nullptr || Ast_IsFile(file));                                                  \
-        ASSERT(scope == nullptr || Ast_IsScope(scope));                                               \
-        Ast* ast         = (Ast*)std::memset(::operator new(sizeof(Ast)), 0, sizeof(Ast));            \
-        ast->Kind        = AstKind::name;                                                             \
-        ast->ParentFile  = file;                                                                      \
-        ast->ParentScope = scope;                                                                     \
-        std::memcpy(&ast->name, &data, sizeof(Ast##name##Data));                                      \
-        return ast;                                                                                   \
+#define AST_KIND(name, str, type_data)                                                            \
+    inline Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, Ast##name##Data data) {    \
+        ASSERT(file == nullptr || Ast_IsFile(file));                                              \
+        ASSERT(scope == nullptr || Ast_IsScope(scope));                                           \
+        Ast* ast         = (Ast*)std::memset(::operator new(sizeof(Ast)), 0, sizeof(Ast));        \
+        ast->Kind        = AstKind::name;                                                         \
+        ast->ParentFile  = file;                                                                  \
+        ast->ParentScope = scope;                                                                 \
+        ast->Completion  = AstCompletion::Incomplete;                                             \
+        std::memcpy(&ast->name, &data, sizeof(Ast##name##Data)); /* To stop 'operator =' error */ \
+        return ast;                                                                               \
     }
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)
