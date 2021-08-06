@@ -14,6 +14,7 @@ void Ast_Print(Ast* ast, u64 indent) {
     };
 
     if (ast == nullptr) {
+        Print("nullptr");
         return;
     }
 

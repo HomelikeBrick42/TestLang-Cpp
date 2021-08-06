@@ -113,8 +113,12 @@ AstExpression* Parser::ParsePrimaryExpression() {
         } break;
 
         default: {
-            // TODO: Error
-            ASSERT(false);
+            const char* message = "Unexpected '%.*s'";
+            String name         = GetTokenKindName(this->NextToken().Kind);
+            u64 size            = std::snprintf(nullptr, 0, message, (u32)name.Length, name.Data);
+            char* buffer        = new char[size];
+            std::sprintf(buffer, message, (u32)name.Length, name.Data);
+            Array_Add(this->Errors, String(buffer));
             return nullptr;
         } break;
     }
