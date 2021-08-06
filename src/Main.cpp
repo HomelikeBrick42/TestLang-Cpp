@@ -53,5 +53,6 @@ int main(int argc, char** argv) {
     Ast_Print(statement);
 
     delete[] data;
+    std::fclose(file);
     return 0;
 }
