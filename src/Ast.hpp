@@ -6,17 +6,19 @@
 #include "Token.hpp"
 
 #define AST_KINDS                                                         \
-    AST_KIND(File, "File", {                                              \
-        AstScope* Scope;                                                  \
-        Array<Ast*> ExtraVariablesInScope; /* e.g. Function parameters */ \
-    })                                                                    \
+    AST_KIND(File, "File", { AstScope* Scope; })                          \
                                                                           \
     AST_KIND_BEGIN(Statement)                                             \
                                                                           \
-    AST_KIND(Scope, "Scope", { Array<AstStatement*> Statements; })        \
+    AST_KIND(Scope, "Scope", {                                            \
+        Array<AstStatement*> Statements;                                  \
+        Array<Ast*> ExtraVariablesInScope; /* e.g. Function parameters */ \
+    })                                                                    \
                                                                           \
     AST_KIND(Declaration, "Declaration", {                                \
-        AstName* Name; /* TODO: Type */                                   \
+        bool Constant;                                                    \
+        AstName* Name;                                                    \
+        AstType* Type;                                                    \
         AstExpression* Value;                                             \
     })                                                                    \
                                                                           \
@@ -37,14 +39,20 @@
         AstExpression* Right;                                             \
     })                                                                    \
                                                                           \
+    AST_KIND_BEGIN(Type)                                                  \
+                                                                          \
+    AST_KIND(TypeName, "Type Name", { Token Name; })                      \
+                                                                          \
+    AST_KIND_END(Type)                                                    \
+                                                                          \
     AST_KIND_END(Expression)                                              \
                                                                           \
     AST_KIND_END(Statement)
 
 enum struct AstKind {
-#define AST_KIND(name, str, ...) name,
-#define AST_KIND_BEGIN(name)     _##name##_Begin,
-#define AST_KIND_END(name)       _##name##_End,
+#define AST_KIND(name, str, type_data) name,
+#define AST_KIND_BEGIN(name)           _##name##_Begin,
+#define AST_KIND_END(name)             _##name##_End,
     AST_KINDS
 #undef AST_KIND
 #undef AST_KIND_BEGIN
@@ -53,8 +61,8 @@ enum struct AstKind {
 
 inline static String GetAstKindName(AstKind kind) {
     switch (kind) {
-#define AST_KIND(name, str, ...) \
-    case AstKind::name:          \
+#define AST_KIND(name, str, type_data) \
+    case AstKind::name:                \
         return str;
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)
@@ -69,15 +77,15 @@ inline static String GetAstKindName(AstKind kind) {
 
 struct Ast;
 
-#define AST_KIND(name, str, ...) using Ast##name = Ast;
-#define AST_KIND_BEGIN(name)     using Ast##name = Ast;
+#define AST_KIND(name, str, type_data) using Ast##name = Ast;
+#define AST_KIND_BEGIN(name)           using Ast##name = Ast;
 #define AST_KIND_END(name)
 AST_KINDS
 #undef AST_KIND
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
-#define AST_KIND(name, str, ...) struct Ast##name##Data __VA_ARGS__;
+#define AST_KIND(name, str, type_data) struct Ast##name##Data type_data;
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)
 AST_KINDS
@@ -91,7 +99,7 @@ struct Ast {
     AstScope* ParentScope;
 
     union {
-#define AST_KIND(name, str, ...) Ast##name##Data name;
+#define AST_KIND(name, str, type_data) Ast##name##Data name;
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)
         AST_KINDS
@@ -101,7 +109,7 @@ struct Ast {
     };
 };
 
-#define AST_KIND(name, str, ...)                      \
+#define AST_KIND(name, str, type_data)                \
     inline static bool Ast_Is##name(const Ast* ast) { \
         if (ast == nullptr) {                         \
             return false;                             \
@@ -121,7 +129,7 @@ AST_KINDS
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
-#define AST_KIND(name, str, ...)                                                                      \
+#define AST_KIND(name, str, type_data)                                                                \
     inline static Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, Ast##name##Data data) { \
         ASSERT(file == nullptr || Ast_IsFile(file));                                                  \
         ASSERT(scope == nullptr || Ast_IsScope(scope));                                               \
@@ -142,3 +150,5 @@ AST_KINDS
 #if !defined(KEEP_AST_KINDS)
     #undef AST_KINDS
 #endif
+
+void Ast_Print(Ast* ast, u64 indent = 0);

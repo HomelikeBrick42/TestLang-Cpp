@@ -28,8 +28,7 @@ int main(int argc, char** argv) {
     String fileSource(data, fileSize);
 
     Parser parser(fileSource);
-    AstExpression* expression = parser.ParseExpression();
-    (void)expression;
+    AstStatement* statement = parser.ParseStatement();
 
     if (parser.Lexer.Errors.Length != 0) {
         PrintError("\nLexer Errors:\n");
@@ -50,6 +49,8 @@ int main(int argc, char** argv) {
     if (parser.Lexer.Errors.Length != 0 || parser.Errors.Length != 0) {
         Error("\nThere were errors. We cannot continue.");
     }
+
+    Ast_Print(statement);
 
     delete[] data;
     return 0;

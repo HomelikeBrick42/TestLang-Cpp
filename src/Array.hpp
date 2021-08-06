@@ -52,7 +52,7 @@ void Array_Grow(Array<T>& array, u64 newCapacity) {
 }
 
 template<typename T>
-T& Array_Push(Array<T>& array, const T& value) {
+T& Array_Add(Array<T>& array, const T& value) {
     if (array.Length >= array.Capacity) {
         Array_Grow(array, array.Capacity == 0 ? 1 : array.Capacity * 2);
     }

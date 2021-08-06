@@ -21,9 +21,13 @@ include_directories(src)
 add_executable(
         TestLang
         src/Array.hpp
+        src/Ast.cpp
+        src/Ast.hpp
         src/Defines.hpp
         src/Lexer.cpp
         src/Lexer.hpp
         src/Main.cpp
+        src/Parser.cpp
+        src/Parser.hpp
         src/String.hpp
-        src/Token.hpp src/Parser.cpp src/Parser.hpp src/Ast.hpp)
+        src/Token.hpp)

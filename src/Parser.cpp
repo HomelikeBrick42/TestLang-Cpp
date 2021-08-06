@@ -15,6 +15,72 @@ Token Parser::NextToken() {
     return token;
 }
 
+Token Parser::ExpectToken(TokenKind kind) {
+    if (this->Current.Kind != kind) {
+        const char* message = "Expected '%.*s' got '%.*s'";
+        String name1        = GetTokenKindName(kind);
+        String name2        = GetTokenKindName(this->Current.Kind);
+        u64 size            = std::snprintf(nullptr, 0, message, (u32)name1.Length, name1.Data, (u32)name2.Length, name2.Data);
+        char* buffer        = new char[size];
+        std::sprintf(buffer, message, (u32)name1.Length, name1.Data, (u32)name2.Length, name2.Data);
+        Array_Add(this->Errors, String(buffer));
+
+        // TODO: Think about this
+        return {};
+    } else {
+        return this->NextToken();
+    }
+}
+
+AstStatement* Parser::ParseStatement() {
+    AstExpression* expression = this->ParseExpression();
+
+    switch (this->Current.Kind) {
+        case TokenKind::Colon: {
+            if (!Ast_IsName(expression)) {
+                const char* message = "Expected 'Name' got '%.*s'";
+                String name         = GetAstKindName(expression->Kind);
+                u64 size            = std::snprintf(nullptr, 0, message, (u32)name.Length, name.Data);
+                char* buffer        = new char[size];
+                std::sprintf(buffer, message, (u32)name.Length, name.Data);
+                Array_Add(this->Errors, String(message));
+            }
+            AstDeclaration* declaration = this->ParseDeclaration(expression);
+            this->ExpectToken(TokenKind::Semicolon);
+            return declaration;
+        } break;
+
+        default: {
+            this->ExpectToken(TokenKind::Semicolon);
+            return expression;
+        } break;
+    }
+}
+
+AstDeclaration* Parser::ParseDeclaration(AstName* name) {
+    this->ExpectToken(TokenKind::Colon);
+
+    AstType* type = nullptr;
+    if (this->Current.Kind != TokenKind::Colon && this->Current.Kind != TokenKind::Equals) {
+        type = nullptr; // TODO:
+    }
+
+    if (this->Current.Kind == TokenKind::Colon) {
+        this->ExpectToken(TokenKind::Colon);
+        AstExpression* value = this->ParseExpression();
+        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { true, name, type, value });
+    } else if (this->Current.Kind == TokenKind::Equals) {
+        this->ExpectToken(TokenKind::Equals);
+        AstExpression* value = this->ParseExpression();
+        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, value });
+    } else {
+        if (type == nullptr) {
+            Array_Add(this->Errors, String("Cannot declare variable with nether type nor value"));
+        }
+        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, nullptr });
+    }
+}
+
 AstExpression* Parser::ParseExpression() {
     return ParseBinaryExpression(0);
 }
@@ -36,10 +102,10 @@ AstExpression* Parser::ParsePrimaryExpression() {
             if (!Token_IsRParen(this->Current)) {
                 const char* message = "Expected ')' got '%.*s'";
                 String name         = GetTokenKindName(this->Current.Kind);
-                u64 size            = std::snprintf(nullptr, 0, message, (u64)name.Length, name.Data);
+                u64 size            = std::snprintf(nullptr, 0, message, (u32)name.Length, name.Data);
                 char* buffer        = new char[size];
                 std::sprintf(buffer, message, (u32)name.Length, name.Data);
-                Array_Push(this->Errors, String(message));
+                Array_Add(this->Errors, String(buffer));
             } else {
                 this->NextToken();
             }

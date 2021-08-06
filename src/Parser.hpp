@@ -11,12 +11,15 @@ public:
     Parser(const String& source);
     ~Parser();
 public:
+    AstStatement* ParseStatement();
+    AstDeclaration* ParseDeclaration(AstName* name);
+
     AstExpression* ParseExpression();
-private:
     AstExpression* ParsePrimaryExpression();
     AstExpression* ParseBinaryExpression(u64 parentPrecedence);
 private:
     Token NextToken();
+    Token ExpectToken(TokenKind kind);
 public:
     Lexer Lexer;
     Array<String> Errors;

@@ -144,7 +144,7 @@ Token Lexer::NextToken() {
                                 u64 size            = std::snprintf(nullptr, 0, message, character, base);
                                 char* buffer        = new char[size];
                                 std::sprintf(buffer, message, character, base);
-                                Array_Push(this->Errors, String(buffer));
+                                Array_Add(this->Errors, String(buffer));
                             }
 
                             intValue *= base;
@@ -290,7 +290,7 @@ Token Lexer::NextToken() {
                         case 'x':
                         case 'y':
                         case 'z': {
-                            Array_Push(buffer, NextChar());
+                            Array_Add(buffer, NextChar());
                         }
                             continue;
 
@@ -312,7 +312,7 @@ Token Lexer::NextToken() {
                 u64 size            = std::snprintf(nullptr, 0, message, character);
                 char* buffer        = new char[size];
                 std::sprintf(buffer, message, character);
-                Array_Push(this->Errors, String(buffer));
+                Array_Add(this->Errors, String(buffer));
             } break;
         }
 
