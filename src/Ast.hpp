@@ -47,6 +47,7 @@
                                                                           \
     AST_KIND_BEGIN(Type)                                                  \
                                                                           \
+    AST_KIND(TypeType, "Type Type", {})                                   \
     AST_KIND(TypeName, "Type Name", { Token Name; })                      \
     AST_KIND(TypePointer, "Type Pointer", { AstType* PointerTo; })        \
     AST_KIND(TypeDeref, "Type Deref", { AstType* DerefedType; })          \
@@ -121,7 +122,9 @@ struct Ast {
     AstKind Kind;
     AstFile* ParentFile;
     AstScope* ParentScope;
+    AstStatement* ParentStatement;
     AstCompletion Completion;
+    AstType* Type;
 
     union {
 #define AST_KIND(name, str, type_data) Ast##name##Data name;
@@ -154,17 +157,20 @@ AST_KINDS
 #undef AST_KIND_BEGIN
 #undef AST_KIND_END
 
-#define AST_KIND(name, str, type_data)                                                            \
-    inline Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, Ast##name##Data data) {    \
-        ASSERT(file == nullptr || Ast_IsFile(file));                                              \
-        ASSERT(scope == nullptr || Ast_IsScope(scope));                                           \
-        Ast* ast         = (Ast*)std::memset(::operator new(sizeof(Ast)), 0, sizeof(Ast));        \
-        ast->Kind        = AstKind::name;                                                         \
-        ast->ParentFile  = file;                                                                  \
-        ast->ParentScope = scope;                                                                 \
-        ast->Completion  = AstCompletion::Incomplete;                                             \
-        std::memcpy(&ast->name, &data, sizeof(Ast##name##Data)); /* To stop 'operator =' error */ \
-        return ast;                                                                               \
+#define AST_KIND(name, str, type_data)                                                                                  \
+    inline Ast##name* Ast_Create##name(AstFile* file, AstScope* scope, AstStatement* statement, Ast##name##Data data) { \
+        ASSERT(file == nullptr || Ast_IsFile(file));                                                                    \
+        ASSERT(scope == nullptr || Ast_IsScope(scope));                                                                 \
+        ASSERT(statement == nullptr || Ast_IsStatement(statement));                                                     \
+        Ast* ast             = (Ast*)std::memset(::operator new(sizeof(Ast)), 0, sizeof(Ast));                          \
+        ast->Kind            = AstKind::name;                                                                           \
+        ast->ParentFile      = file;                                                                                    \
+        ast->ParentScope     = scope;                                                                                   \
+        ast->ParentStatement = statement;                                                                               \
+        ast->Completion      = AstCompletion::Incomplete;                                                               \
+        ast->Type            = nullptr;                                                                                 \
+        std::memcpy(&ast->name, &data, sizeof(Ast##name##Data)); /* To stop 'operator =' error */                       \
+        return ast;                                                                                                     \
     }
 #define AST_KIND_BEGIN(name)
 #define AST_KIND_END(name)

@@ -43,11 +43,11 @@ void Array_Grow(Array<T>& array, u64 newCapacity) {
     T* newData = (T*)::operator new(newCapacity * sizeof(T));
 
     for (u64 i = 0; i < array.Length; i++) {
-        new(&newData[i]) T(std::move(array[i]));
+        new (&newData[i]) T(std::move(array[i]));
     }
 
     ::operator delete(array.Data, array.Capacity * sizeof(T));
-    array.Data = newData;
+    array.Data     = newData;
     array.Capacity = newCapacity;
 }
 

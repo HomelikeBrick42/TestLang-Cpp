@@ -5,7 +5,8 @@ Parser::Parser(const String& source)
     , Errors(Array_Create<String>())
     , Current(this->Lexer.NextToken())
     , ParentFile(nullptr)
-    , ParentScope(nullptr) {}
+    , ParentScope(nullptr)
+    , ParentStatement(nullptr) {}
 
 Parser::~Parser() = default;
 
@@ -34,13 +35,16 @@ Token Parser::ExpectToken(TokenKind kind) {
 
 AstScope* Parser::ParseScope(Array<Ast*> extraVarsInScope) {
     this->ExpectToken(TokenKind::LBrace);
-    AstScope* scope   = Ast_CreateScope(this->ParentFile, this->ParentScope, { Array_Create<AstStatement*>(), extraVarsInScope });
-    this->ParentScope = scope;
+    AstScope* scope = Ast_CreateScope(
+        this->ParentFile, this->ParentScope, this->ParentStatement, { Array_Create<AstStatement*>(), extraVarsInScope });
+    this->ParentScope     = scope;
+    this->ParentStatement = scope;
     while (!Token_IsRBrace(this->Current) && !Token_IsEndOfFile(this->Current)) {
         Array_Add(scope->Scope.Statements, this->ParseStatement());
     }
     this->ExpectToken(TokenKind::RBrace);
-    this->ParentScope = scope->ParentScope;
+    this->ParentScope     = scope->ParentScope;
+    this->ParentStatement = scope->ParentStatement;
     return scope;
 }
 
@@ -76,26 +80,39 @@ AstStatement* Parser::ParseStatement() {
 }
 
 AstDeclaration* Parser::ParseDeclaration(AstName* name) {
+    AstDeclaration* declaration = Ast_CreateDeclaration(this->ParentFile, this->ParentScope, this->ParentStatement, {});
+    this->ParentStatement       = declaration;
+
+    name->ParentStatement         = declaration;
+    declaration->Declaration.Name = name;
+
     this->ExpectToken(TokenKind::Colon);
 
-    AstType* type = nullptr;
+    declaration->Declaration.Type = nullptr;
     if (this->Current.Kind != TokenKind::Colon && this->Current.Kind != TokenKind::Equals) {
-        type = this->ParseType();
+        declaration->Declaration.Type = this->ParseType();
     }
 
     if (Token_IsColon(this->Current)) {
         this->ExpectToken(TokenKind::Colon);
-        AstExpression* value = this->ParseExpression();
-        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { true, name, type, value });
+        declaration->Declaration.Constant = true;
+        declaration->Declaration.Value    = this->ParseExpression();
+        this->ParentStatement             = declaration->ParentStatement;
+        return declaration;
     } else if (Token_IsEquals(this->Current)) {
         this->ExpectToken(TokenKind::Equals);
-        AstExpression* value = this->ParseExpression();
-        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, value });
+        declaration->Declaration.Constant = false;
+        declaration->Declaration.Value    = this->ParseExpression();
+        this->ParentStatement             = declaration->ParentStatement;
+        return declaration;
     } else {
-        if (type == nullptr) {
+        if (declaration->Declaration.Type == nullptr) {
             Array_Add(this->Errors, String("Cannot declare variable with nether type nor value"));
         }
-        return Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, nullptr });
+        declaration->Declaration.Constant = false;
+        declaration->Declaration.Value    = nullptr;
+        this->ParentStatement             = declaration->ParentStatement;
+        return declaration;
     }
 }
 
@@ -106,13 +123,13 @@ AstExpression* Parser::ParseExpression() {
 AstExpression* Parser::ParsePrimaryExpression() {
     switch (this->Current.Kind) {
         case TokenKind::Identifier:
-            return Ast_CreateName(this->ParentFile, this->ParentScope, { this->NextToken() });
+            return Ast_CreateName(this->ParentFile, this->ParentScope, this->ParentStatement, { this->NextToken() });
 
         case TokenKind::Integer:
-            return Ast_CreateIntegerLiteral(this->ParentFile, this->ParentScope, { this->NextToken() });
+            return Ast_CreateIntegerLiteral(this->ParentFile, this->ParentScope, this->ParentStatement, { this->NextToken() });
 
         case TokenKind::Float:
-            return Ast_CreateFloatLiteral(this->ParentFile, this->ParentScope, { this->NextToken() });
+            return Ast_CreateFloatLiteral(this->ParentFile, this->ParentScope, this->ParentStatement, { this->NextToken() });
 
         case TokenKind::LParen: {
             this->NextToken();
@@ -183,7 +200,7 @@ AstExpression* Parser::ParseBinaryExpression(u64 parentPrecedence) {
     if (unaryPrecedence > parentPrecedence) {
         Token operator_        = this->NextToken();
         AstExpression* operand = this->ParseBinaryExpression(unaryPrecedence);
-        left                   = Ast_CreateUnary(this->ParentFile, this->ParentScope, { operator_, operand });
+        left = Ast_CreateUnary(this->ParentFile, this->ParentScope, this->ParentStatement, { operator_, operand });
     } else {
         left = this->ParsePrimaryExpression();
     }
@@ -196,26 +213,27 @@ AstExpression* Parser::ParseBinaryExpression(u64 parentPrecedence) {
 
         Token operator_      = this->NextToken();
         AstExpression* right = this->ParseBinaryExpression(precedence);
-        left                 = Ast_CreateBinary(this->ParentFile, this->ParentScope, { left, operator_, right });
+        left = Ast_CreateBinary(this->ParentFile, this->ParentScope, this->ParentStatement, { left, operator_, right });
     }
 
     return left;
 }
+
 AstType* Parser::ParseType() {
     switch (this->Current.Kind) {
         case TokenKind::Caret: {
             this->ExpectToken(TokenKind::Caret);
-            return Ast_CreateTypePointer(this->ParentFile, this->ParentScope, { this->ParseType() });
+            return Ast_CreateTypePointer(this->ParentFile, this->ParentScope, this->ParentStatement, { this->ParseType() });
         } break;
 
         case TokenKind::Asterisk: {
             this->ExpectToken(TokenKind::Asterisk);
-            return Ast_CreateTypeDeref(this->ParentFile, this->ParentScope, { this->ParseType() });
+            return Ast_CreateTypeDeref(this->ParentFile, this->ParentScope, this->ParentStatement, { this->ParseType() });
         } break;
 
         case TokenKind::Identifier: {
             Token token = this->ExpectToken(TokenKind::Identifier);
-            return Ast_CreateTypeName(this->ParentFile, this->ParentScope, { token });
+            return Ast_CreateTypeName(this->ParentFile, this->ParentScope, this->ParentStatement, { token });
         } break;
 
         case TokenKind::LParen: {
@@ -258,7 +276,9 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
             Array_Add(this->Errors, String("Cannot have a declaration with no type nor value"));
         }
 
-        Array_Add(arguments, Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, firstArgName, type, value }));
+        Array_Add(arguments,
+                  Ast_CreateDeclaration(
+                      this->ParentFile, this->ParentScope, this->ParentStatement, { false, firstArgName, type, value }));
 
         if (!Token_IsRParen(this->Current)) {
             this->ExpectToken(TokenKind::Comma);
@@ -266,7 +286,8 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
     }
 
     while (!Token_IsRParen(this->Current) && !Token_IsEndOfFile(this->Current)) {
-        AstName* name = Ast_CreateName(this->ParentFile, this->ParentScope, { this->ExpectToken(TokenKind::Identifier) });
+        AstName* name = Ast_CreateName(
+            this->ParentFile, this->ParentScope, this->ParentStatement, { this->ExpectToken(TokenKind::Identifier) });
         this->ExpectToken(TokenKind::Colon);
 
         AstType* type = nullptr;
@@ -283,7 +304,9 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
             Array_Add(this->Errors, String("Cannot have a declaration with no type nor value"));
         }
 
-        Array_Add(arguments, Ast_CreateDeclaration(this->ParentFile, this->ParentScope, { false, name, type, value }));
+        Array_Add(
+            arguments,
+            Ast_CreateDeclaration(this->ParentFile, this->ParentScope, this->ParentStatement, { false, name, type, value }));
 
         if (!Token_IsRParen(this->Current)) {
             this->ExpectToken(TokenKind::Comma);
@@ -298,13 +321,16 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
         this->ExpectToken(TokenKind::GreaterThan);
         returnType = this->ParseType();
     } else {
-        returnType = Ast_CreateTypeVoid(this->ParentFile, this->ParentScope, {});
+        returnType = Ast_CreateTypeVoid(this->ParentFile, this->ParentScope, this->ParentStatement, {});
     }
 
     if (Token_IsLBrace(this->Current)) {
-        Array<Ast*> scopeParams = Array_Create<Ast*>();
         AstProcedure* procedure =
-            Array_Add(scopeParams, Ast_CreateProcedure(this->ParentFile, this->ParentScope, { arguments, returnType, nullptr }));
+            Ast_CreateProcedure(this->ParentFile, this->ParentScope, this->ParentStatement, { arguments, returnType, nullptr });
+        Array<Ast*> scopeParams = Array_Create<Ast*>();
+        for (u64 i = 0; i < procedure->Procedure.Arguments.Length; i++) {
+            Array_Add(scopeParams, procedure->Procedure.Arguments[i]);
+        }
         AstScope* body            = this->ParseScope(scopeParams);
         procedure->Procedure.Body = body;
         return procedure;
@@ -317,6 +343,6 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
             }
             Array_Add(argumentTypes, type);
         }
-        return Ast_CreateTypeProcedure(this->ParentFile, this->ParentScope, { argumentTypes, returnType });
+        return Ast_CreateTypeProcedure(this->ParentFile, this->ParentScope, this->ParentStatement, { argumentTypes, returnType });
     }
 }

@@ -132,6 +132,10 @@ void Ast_Print(Ast* ast, u64 indent) {
             Print("(<Type Void>)");
         } break;
 
+        case AstKind::TypeType: {
+            Print("(<Type Type>)");
+        } break;
+
         case AstKind::TypeProcedure: {
             Print("(<Type Procedure>");
             PrintCategory("Arguments: (");

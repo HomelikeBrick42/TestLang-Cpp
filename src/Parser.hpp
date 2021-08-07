@@ -33,4 +33,5 @@ private:
     Token Current;
     AstFile* ParentFile;
     AstScope* ParentScope;
+    AstStatement* ParentStatement;
 };
