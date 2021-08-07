@@ -34,12 +34,14 @@ Token Parser::ExpectToken(TokenKind kind) {
 
 AstScope* Parser::ParseScope(Array<Ast*> extraVarsInScope) {
     this->ExpectToken(TokenKind::LBrace);
-    Array<AstStatement*> statements = Array_Create<AstStatement*>();
+    AstScope* scope   = Ast_CreateScope(this->ParentFile, this->ParentScope, { Array_Create<AstStatement*>(), extraVarsInScope });
+    this->ParentScope = scope;
     while (!Token_IsRBrace(this->Current) && !Token_IsEndOfFile(this->Current)) {
-        Array_Add(statements, this->ParseStatement());
+        Array_Add(scope->Scope.Statements, this->ParseStatement());
     }
     this->ExpectToken(TokenKind::RBrace);
-    return Ast_CreateScope(this->ParentFile, this->ParentScope, { statements, extraVarsInScope });
+    this->ParentScope = scope->ParentScope;
+    return scope;
 }
 
 AstStatement* Parser::ParseStatement() {
@@ -121,8 +123,8 @@ AstExpression* Parser::ParsePrimaryExpression() {
             if (Token_IsColon(this->Current)) {
                 if (!Ast_IsName(expression)) {
                     Array_Add(this->Errors, String("Expected name")); // TODO: Better error
-                    return this->ParseProcedure(expression);
                 }
+                return this->ParseProcedure(expression);
             }
             this->ExpectToken(TokenKind::RParen);
             return expression;
@@ -212,7 +214,8 @@ AstType* Parser::ParseType() {
         } break;
 
         case TokenKind::Identifier: {
-            return Ast_CreateTypeName(this->ParentFile, this->ParentScope, { this->ExpectToken(TokenKind::Identifier) });
+            Token token = this->ExpectToken(TokenKind::Identifier);
+            return Ast_CreateTypeName(this->ParentFile, this->ParentScope, { token });
         } break;
 
         case TokenKind::LParen: {

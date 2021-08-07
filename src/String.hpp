@@ -17,4 +17,28 @@ struct String {
     const u8& operator[](u64 index) const {
         return this->Data[index];
     }
+
+    bool operator==(const String& other) const {
+        if (this->Length != other.Length) {
+            return false;
+        }
+
+        if (this->Data == other.Data) {
+            return true;
+        }
+
+        return std::memcmp(this->Data, other.Data, this->Length) == 0;
+    }
+
+    bool operator!=(const String& other) const {
+        if (this->Length == other.Length) {
+            return false;
+        }
+
+        if (this->Data == other.Data) {
+            return true;
+        }
+
+        return std::memcmp(this->Data, other.Data, this->Length) != 0;
+    }
 };

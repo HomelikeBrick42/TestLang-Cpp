@@ -50,6 +50,16 @@
     AST_KIND(TypeName, "Type Name", { Token Name; })                      \
     AST_KIND(TypePointer, "Type Pointer", { AstType* PointerTo; })        \
     AST_KIND(TypeDeref, "Type Deref", { AstType* DerefedType; })          \
+    AST_KIND(TypeInteger, "Type Integer", {                               \
+        u64 Size;                                                         \
+        bool Signed;                                                      \
+    })                                                                    \
+    AST_KIND(TypeFloat, "Type Float", { u64 Size; })                      \
+    AST_KIND(TypeVoid, "Type Void", {})                                   \
+    AST_KIND(TypeProcedure, "Type Procedure", {                           \
+        Array<AstType*> Arguments;                                        \
+        AstType* ReturnType;                                              \
+    })                                                                    \
                                                                           \
     AST_KIND_END(Type)                                                    \
                                                                           \

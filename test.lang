@@ -1,3 +1,4 @@
-main :: () -> void {
-    test: *(*^^*(^int)) = (1 + -2 * hello2) % 2;
+main :: (a: int, b: hello) -> void {
+    newType :: ^int;
+    test: **^^*newType = (1 + -2 * hello2) % 2;
 }

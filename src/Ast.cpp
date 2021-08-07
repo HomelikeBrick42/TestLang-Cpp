@@ -40,7 +40,7 @@ void Ast_Print(Ast* ast, u64 indent) {
                     Print(",\n");
                 }
             }
-            Print(")");
+            Print("))");
         } break;
 
         case AstKind::Declaration: {
@@ -114,6 +114,45 @@ void Ast_Print(Ast* ast, u64 indent) {
             Print(")");
         } break;
 
+        case AstKind::TypeInteger: {
+            Print("(<Type Integer>");
+            PrintCategory("Size: ");
+            Print("%llu", ast->TypeInteger.Size);
+            PrintCategory("Signed: ");
+            Print(ast->TypeInteger.Signed ? "true)" : "false)");
+        } break;
+
+        case AstKind::TypeFloat: {
+            Print("(<Type Float>");
+            PrintCategory("Size: ");
+            Print("%llu)", ast->TypeFloat.Size);
+        } break;
+
+        case AstKind::TypeVoid: {
+            Print("(<Type Void>)");
+        } break;
+
+        case AstKind::TypeProcedure: {
+            Print("(<Type Procedure>");
+            PrintCategory("Arguments: (");
+            for (u64 i = 0; i < ast->TypeProcedure.Arguments.Length; i++) {
+                if (i == 0) {
+                    Print("\n");
+                }
+
+                PrintIndent(2);
+                Ast_Print(ast->TypeProcedure.Arguments[i], indent + 2);
+
+                if (i != ast->TypeProcedure.Arguments.Length - 1) {
+                    Print(",\n");
+                }
+            }
+            Print(")");
+            PrintCategory("ReturnType: ");
+            Ast_Print(ast->TypeProcedure.ReturnType, indent + 1);
+            Print(")");
+        } break;
+
         case AstKind::Procedure: {
             Print("(<Procedure>");
             PrintCategory("Arguments: (");
@@ -122,8 +161,8 @@ void Ast_Print(Ast* ast, u64 indent) {
                     Print("\n");
                 }
 
-                PrintIndent(1);
-                Ast_Print(ast->Procedure.Arguments[i], indent + 1);
+                PrintIndent(2);
+                Ast_Print(ast->Procedure.Arguments[i], indent + 2);
 
                 if (i != ast->Procedure.Arguments.Length - 1) {
                     Print(",\n");
@@ -134,6 +173,7 @@ void Ast_Print(Ast* ast, u64 indent) {
             Ast_Print(ast->Procedure.ReturnType, indent + 1);
             PrintCategory("Body: ");
             Ast_Print(ast->Procedure.Body, indent + 1);
+            Print(")");
         } break;
 
         case AstKind::_Statement_Begin:
