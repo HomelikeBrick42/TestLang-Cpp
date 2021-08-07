@@ -297,6 +297,8 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
         this->ExpectToken(TokenKind::Minus);
         this->ExpectToken(TokenKind::GreaterThan);
         returnType = this->ParseType();
+    } else {
+        returnType = Ast_CreateTypeVoid(this->ParentFile, this->ParentScope, {});
     }
 
     if (Token_IsLBrace(this->Current)) {
@@ -307,8 +309,14 @@ AstProcedure* Parser::ParseProcedure(AstName* firstArgName) {
         procedure->Procedure.Body = body;
         return procedure;
     } else {
-        // TODO: Procedure Type
-        ASSERT(false);
-        return nullptr;
+        Array<AstType*> argumentTypes = Array_Create<AstType*>();
+        for (u64 i = 0; i < arguments.Length; i++) {
+            AstType* type = arguments[i]->Declaration.Type;
+            if (type == nullptr) {
+                Array_Add(this->Errors, String("Must always have argument type for procedure type!"));
+            }
+            Array_Add(argumentTypes, type);
+        }
+        return Ast_CreateTypeProcedure(this->ParentFile, this->ParentScope, { argumentTypes, returnType });
     }
 }

@@ -1,4 +1,4 @@
-main :: (a: int, b: hello) -> void {
+main :: () -> void {
     newType :: ^int;
     test: **^^*newType = (1 + -2 * hello2) % 2;
 }
